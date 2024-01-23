@@ -212,5 +212,105 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true")
 
     args = parser.parse_args()
+<<<<<<< HEAD
     main(args)
     mp.spawn(train, nprocs=ngpus_per_node, args=(ngpus_per_node, args), join=True)  
+=======
+    
+    random.seed(args.seed)
+    print("Reading coverage files")
+    n_rep = args.n_rep
+    datapath = [args.datapath + '/rep' + str(x)  + '.txt'  for x in list(range(1, int(n_rep) + 1))]
+    d = []
+    for file in datapath:
+        if args.debug:
+            print("Reading RCL input file " + file + ".")
+        cov = read_data_new(file)
+        d.append(cov)
+    # test set
+    if args.sample != 'null':
+        selected = np.random.choice(d[0].shape[0], int(d[0].shape[0] * 0.85), replace = False)
+        pickle.dump(selected, open(str(args.sample) + ".p", "wb"))
+        d = np.array(d)
+        d = d[:, selected, :]
+        d = list(d)
+
+    n_dat = len(d[0])
+    n_train = math.ceil(n_dat * 0.8)
+    n_val = n_dat - n_train
+    input_size = len(d[0][0])
+    if args.model == 'ResAE':
+        input_size = (1, input_size)
+    input_dim = 1
+
+    if len(args.fragpath) > 0:
+        input_dim = 2
+        print("Reading fragment length files\n")
+        for i, f in enumerate(args.fragpath):
+            fra = read_fragment(f, [1, 2, 3, 4, 6])
+            d[i] = np.dstack((fra, d[i]))
+       
+    w_pos = 0
+    w_neg = 0
+    if args.labpath != 'null':
+        lab = pickle.load(open(args.labpath, "rb"))
+        posn = 0
+        negn = 0
+        for l in lab:
+            negn += l.count(0)
+            posn += l.count(1)
+        w_pos = (posn + negn) / (2 * posn)
+        w_neg = (posn + negn) / (2 * negn)
+        rep_data = combine_rep_lab(d, lab, device=device)
+    else:
+        rep_data = combine_reps(d, device=device)
+    class_weights = torch.FloatTensor([w_neg, w_pos]).to(device)
+    print("weight ", class_weights)
+    print("Finished reading\n")
+    hparams = Namespace(lr=args.lr,
+                        epochs=args.epochs,
+                        batch_size=args.batch_size,
+                        train_size=n_train,
+                        validation_size=n_val,
+                        hidden_size=args.hidden_size,
+                        emb_size=args.emb_size,
+                        fea_dim=args.fea_dim, ## dim of feature for computing loss
+                        input_dim=input_dim,
+                        input_size = input_size,
+                        class_num=args.n_class,
+                        ins_temp=args.temperature,
+                        clu_temp=args.temperature,
+                        n_views=2, ## this is for pairwise comparison
+                        n_rep = n_rep,
+                        first_kernel_size = args.first_kernel_size, 
+                        dropout_rate = args.dropout_rate,
+                        device = device,
+                        smooth = args.smooth,
+                        class_weights = class_weights,
+                        modelname = args.model,
+                        beta = 1 ## penalty for encoder decoder, need to tune according to different data
+                        )
+
+    print("Start training\n")
+    if args.labpath != 'null':
+        module = ContrastLearn_lab(hparams)
+    else:
+        module = ContrastLearn(hparams)
+    if torch.__version__.startswith("1"):
+        trainer = pl.Trainer(gpus=args.gpus, max_epochs=hparams.epochs)	# gpus deprecated in 1.7 and removed in 2.0
+    else:
+        trainer = pl.Trainer(devices=args.gpus, max_epochs=hparams.epochs)
+    trainer.fit(module)
+    checkpoint_file = args.modelpath
+    trainer.save_checkpoint(checkpoint_file)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+>>>>>>> 818ce278db744d69a0b8b3e61f0a64af54082021

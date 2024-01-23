@@ -81,7 +81,7 @@ done
 
 if [ $overwrite -eq 1 -o ! -s "$path"/rcl.ckpt ]; then
 	echo "Number of reps ${nreps}, start training"
-	python main.py $debug --epochs $epoch --batch_size $batch --datapath "$path" --n_rep $nreps --modelpath "$path"/rcl.ckpt &> "$path"/out.err
+	python ~/tools/RCL/main.py $debug --epochs $epoch --batch_size $batch --datapath "$path" --n_rep $nreps --modelpath "$path"/rcl.ckpt &> "$path"/out.err
 	echo "Finish training, start writing results (if your data is large, please give more memory)"
 else
 	echo "Using existing \"$path/rcl.ckpt\" file"
@@ -89,7 +89,7 @@ fi
 
 if [ $overwrite -eq 1 -o ! -s "$path"/rcl.bed ]; then
 	while read chr; do
-		python rcl_score.py $debug --model "$path"/rcl.ckpt --dpath "$path"/$ref_prefix"$chr" --names $rep_names --preprocess_region "$path"/bigInputs.txt --id $chr --prefix "$path"
+		python ~/tools/RCL/rcl_score.py $debug --model "$path"/rcl.ckpt --dpath "$path"/$ref_prefix"$chr" --repNames "$rep_names" --preprocess_region "$path"/bigInputs.txt --id $chr --prefix "$path"
 	done < "$path"/chrList.txt
 	cat "$path"/rcl_*bed > "$path"/rcl.bed
 else

@@ -10,10 +10,8 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset
 import math
 from random import randrange
-device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-#1/18/2024
-import torch.distributed as dist
-from torch.nn.parallel import DistributedDataParallel
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 
 ## read coverage in format 
@@ -43,8 +41,12 @@ def read_coverage(file, name = 'lab', pos = 3):
     last_i = 0
     i = 0
     for l in out:
-        name = l[1] 
+        name = l[1]
+        # if cnt == 1:
+        #     tmp = [j[0] for j in out[0:last_i]]
+        #     dat.append(np.array(tmp))
         if name != last_name:
+          # print(i, last_i)
             tmp = [j[0] for j in out[last_i:i]]
             dat.append(np.array(tmp))
             last_i = i
@@ -88,7 +90,7 @@ def read_data_new(file):
     return np.array(dat)
 
 def read_fragment(file, pos = [1]):
-# pos means:
+  # pos means:
 # 2nd col = counts of fragments of length <= 100bp (corresponding to nucleosome free regions), 
 # 3rd col = counts of length between 180 and 247 bp (considered to be mononucleosomes), 
 # 4th col = frags of length between 315 and 473 bp (considered to be dinucleosomes), 
@@ -122,6 +124,28 @@ def read_fragment(file, pos = [1]):
     tmp = [j[0] for j in out[last_i:i]]
     dat.append(np.array(tmp))
     return np.array(dat)
+
+
+# paste reps together and convert to tensor
+# def combine_rep_lab(reps, lab, device):
+#     out = []
+    
+#     rep = reps[0]
+#     for r in reps[1:]:            
+#         rep = np.dstack((rep, r))
+#     rep = rep.transpose(0, 2, 1)
+        
+#     for r1, r2 in zip(rep, lab):
+#         r2 = np.array(r2)
+#         t1 = torch.from_numpy(r1).float().to(device)
+#         t2 = torch.from_numpy(r2).float().to(device)
+    
+#         pair = (t1, t2.unsqueeze(0))
+    
+#         out.append(pair)
+  
+#     return out
+
 
 def combine_rep_lab(reps, lab, device):
     out = []
@@ -184,13 +208,8 @@ def combine_reps(reps, device, center = False):
             dim2 = int(r2.shape[0]/dim1)
             r2 = r2.reshape(dim1, dim2, r2.shape[1])
     
-        t1 = torch.from_numpy(r1).float().to(device) #1/18/24
-        t2 = torch.from_numpy(r2).float().to(device) #1/18/24
-        
-        # Use DistributedDataParallel
-        #t1 = DistributedDataParallel(t1, device_ids=[device]) #1/18/24
-        #t2 = DistributedDataParallel(t2, device_ids=[device]) #1/18/24
-
+        t1 = torch.from_numpy(r1).float().to(device)
+        t2 = torch.from_numpy(r2).float().to(device)
         if len(rep1.shape) == 3:
             pair = (t1, t2)
         elif n_rep == 2:

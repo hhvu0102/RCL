@@ -98,11 +98,12 @@ def make_region(datapath):
 
 
 if __name__ == "__main__":
-    
+
     parser = argparse.ArgumentParser(description='metric', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("--repNames", type=str, nargs="+", help="replicate names")
     parser.add_argument("--model", type=str, default="rcl.ckpt", help="fitted RCL model from main.py")
     parser.add_argument("--dpath", type=str, help="directory containing data")
-    parser.add_argument("--names", type=str, nargs="+", help="replicate names")
+#    parser.add_argument("--repNames", type=str, nargs="+", help="replicate names")
     parser.add_argument("--prefix", type=str, help="directory to place output") # output path
     parser.add_argument("--id", type=str)
     parser.add_argument("--psudo", type=int, default = 1)
@@ -115,7 +116,7 @@ if __name__ == "__main__":
     #classification = Classify('chr' + str(args.id) + "/" + str(args.model)) ## this is training seperately
     classification = Classify(str(args.model))    ## train on all (80 or 90 %)
     #datapath = [args.dpath + '/' + f for f in os.listdir(args.dpath) if f.endswith('covBga.txt')]    
-    datapath = [args.dpath + '/' + f + ".covBga.txt" for f in args.names]
+    datapath = [args.dpath + '/' + f + ".covBga.txt" for f in args.repNames[0].split(' ')]
     #print("Using input data: " + str(datapath)) 
     dat = []
     dataf = []

@@ -21,10 +21,11 @@ warnings.filterwarnings("ignore", ".*does not have many workers.*")
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 
-from torch.nn.parallel import DistributedDataParallel
+from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data.distributed import DistributedSampler
 import torch.multiprocessing as mp
 import torch.distributed as dist
+
 
 def align_loss(x, y, alpha=2):
     return (x - y).norm(p=2, dim=1).pow(alpha)
@@ -51,17 +52,22 @@ class ContrastLearn(pl.LightningModule):
         self.clu_loss = ClusterLoss(self.hparams.class_num, self.hparams.clu_temp,
                                     self.hparams.n_views)
         self.AEloss = nn.MSELoss()
+        self.rep_data = self.hparams.rep_data
+        
+        print(self.device)
+
+        self.model = DDP(self.model, device_ids=[self.device])
 
     def total_steps(self):
         return len(self.train_dataloader()) // self.hparams.epochs
     
     def train_dataloader(self):
-        return DataLoader(rep_data,
+        return DataLoader(self.hparams.rep_data,
                           batch_size=self.hparams.batch_size, 
                           sampler=SubsetRandomSampler(list(range(self.hparams.train_size))))
         
     def val_dataloader(self):
-        return DataLoader(rep_data,
+        return DataLoader(self.hparams.rep_data,
                       batch_size=self.hparams.batch_size, 
                       shuffle=False,
                       sampler=SequentialSampler(list(range(self.hparams.train_size + 1, 
@@ -73,7 +79,7 @@ class ContrastLearn(pl.LightningModule):
     def step(self, batch, step_name = "train"):
         all_emb = []
         all_clu = []
-        
+       
         X, Y = batch
         loss = 0
         if self.hparams.smooth:
@@ -117,7 +123,7 @@ class ContrastLearn(pl.LightningModule):
             loss += loss_instance + loss_cluster
     
         loss /= len(orders)    
-        loss_key = f"{step_name}_loss"
+        loss_key = f"{step_name}_loss_{self.device}"
         tensorboard_logs = {loss_key: loss}
 
         return { ("loss" if step_name == "train" else loss_key): loss, 'log': tensorboard_logs,

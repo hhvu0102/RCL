@@ -31,7 +31,7 @@ from train import *
 
 
 def ddp_setup():
-    init_process_group(backend="nccl")
+    dist.init_process_group(backend="gloo")
     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
  
 def prepare_dataloader(dataset: Dataset, batch_size: int): #1/18/2024 -  need to check if this function takes the data structure that we have now
@@ -45,11 +45,44 @@ def prepare_dataloader(dataset: Dataset, batch_size: int): #1/18/2024 -  need to
     )
 
 
+<<<<<<< HEAD
 def main(rank, world_size, args):
     # Initialize distributed environment
     ddp_setup()
     rank = dist.get_rank()
     device_id = rank % torch.cuda.device_count()
+=======
+def main(args):
+     # Initialize distributed environment
+    ddp_setup()
+    rank = dist.get_rank()
+    device_id = rank % torch.cuda.device_count()
+
+
+    random.seed(args.seed) 
+    n_rep = args.n_rep
+
+    # Load raw input data
+    datapath = [args.datapath + '/rep' + str(x)  + '.txt'  for x in list(range(1, int(n_rep) + 1))]
+    d = []
+    for file in datapath:
+        if args.debug:
+            print("Reading RCL input file " + file + ".")
+        cov = read_data_new(file)
+        d.append(cov)
+     
+    # Test set, if we want to test on certain samples only
+    if args.sample != 'null':
+        selected = np.random.choice(d[0].shape[0], int(d[0].shape[0] * 0.85), replace = False)
+        pickle.dump(selected, open(str(args.sample) + ".p", "wb"))
+        d = np.array(d)
+        d = d[:, selected, :]
+        d = list(d)
+
+    n_dat = len(d[0])
+    print(f"Start on rank {rank}\n")
+
+>>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
 
     random.seed(args.seed)
     n_rep = args.n_rep
@@ -160,6 +193,10 @@ def main(rank, world_size, args):
     #trainer.save_checkpoint(checkpoint_file)
     
     
+<<<<<<< HEAD
+=======
+
+>>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='train', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -188,7 +225,26 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+<<<<<<< HEAD
     ngpus_per_node = torch.cuda.device_count()
     mp.spawn(main, nprocs=ngpus_per_node, args=(ngpus_per_node, args), join=True)  
     
    
+=======
+    main(args)
+#    ngpus_per_node = torch.cuda.device_count()
+#    mp.spawn(main, nprocs=ngpus_per_node, args=(ngpus_per_node, args), join=True)  
+
+    
+   
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+>>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7

@@ -1,18 +1,11 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler, SequentialSampler
-<<<<<<< HEAD
 from torch.utils.data.dataloader import default_collate
 from torch.multiprocessing import cpu_count
 from torch.optim import Adam
 import pytorch_lightning as pl
 from torch.nn.parallel import DistributedDataParallel as DDP
-=======
-from torch.multiprocessing import cpu_count
-from torch.optim import Adam
-import pytorch_lightning as pl
-from torch.nn.parallel import DistributedDataParallel
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
 from torch.utils.data.distributed import DistributedSampler
 import torch.multiprocessing as mp
 import torch.distributed as dist
@@ -21,10 +14,7 @@ import numpy as np
 import math
 import random
 import argparse
-<<<<<<< HEAD
 from argparse import Namespace
-=======
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
 import pickle
 
 from architect import *
@@ -37,7 +27,6 @@ warnings.filterwarnings("ignore", ".*does not have many workers.*")
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:32"
 
-<<<<<<< HEAD
 
 def align_loss(x, y, alpha=2):
     return (x - y).norm(p=2, dim=1).pow(alpha)
@@ -239,54 +228,17 @@ class ContrastLearn_lab(pl.LightningModule):
         optimizer = Adam(self.model.parameters(), lr=self.hparams.lr)
         return [optimizer], []
    
-=======
-from train import *
-
-
-class MyTrainDataset(Dataset):
-    def __init__(self, array):
-        self.size = len(array)
-        self.data = array
-
-    def __len__(self):
-        return self.size
-
-    def __getitem__(self, index):
-        return self.data[index]
-
-
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
 def ddp_setup():
     dist.init_process_group(backend="gloo")
     torch.cuda.set_device(int(os.environ["LOCAL_RANK"]))
 
-<<<<<<< HEAD
-=======
-
-def prepare_dataloader(dataset: Dataset, batch_size: int): #1/18/2024 -  need to check if this function takes the data structure that we have now
-                                                            # batch_size is likely something like total number of datapoints/number of gpus
-    return DataLoader(
-        dataset,
-        batch_size=batch_size,
-        pin_memory=True,
-        shuffle=False,
-        sampler=DistributedSampler(dataset)
-    )
-
-
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
 def main(args):
      # Initialize distributed environment
     ddp_setup()
     rank = dist.get_rank()
-<<<<<<< HEAD
     device_id = rank % torch.cuda.device_count() 
     print(device_id)
 
-=======
-    device_id = rank % torch.cuda.device_count()
-    
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
     # Set up
     random.seed(args.seed) 
     n_rep = args.n_rep
@@ -312,15 +264,10 @@ def main(args):
 
     print(f"Start on rank {rank}\n")
     
-<<<<<<< HEAD
     n_train = math.ceil(n_dat * 0.8) #/ torch.cuda.device_count())
     n_val = n_dat - n_train # math.floor(n_dat / torch.cuda.device_count()) - n_train
     
 
-=======
-    n_train = math.ceil(n_dat * 0.8 / torch.cuda.device_count())
-    n_val = math.ceil(n_dat/torch.cuda.device_count()) - n_train
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
     input_size = len(d[0][0]) #here
     if args.model == 'ResAE':
         input_size = (1, input_size)
@@ -346,18 +293,10 @@ def main(args):
             posn += l.count(1)
         w_pos = (posn + negn) / (2 * posn)
         w_neg = (posn + negn) / (2 * negn)
-<<<<<<< HEAD
         rep_data = combine_rep_lab(d, lab, device=device_id)
     else:
         rep_data = combine_reps(d, device=device_id)
 
-=======
-        rep_data1 = combine_rep_lab(d, lab, device=device_id)
-    else:
-        rep_data1 = combine_reps(d, device=device_id) #need to change d to the data that got distributed across gpus
-    
-    rep_data = random.sample(rep_data1, math.floor(len(rep_data1[0])/torch.cuda.device_count()))  #prepare_dataloader(rep_data1, math.floor(len(rep_data1[0])/torch.cuda.device_count()))
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
     
     print(len(rep_data))
     print(len(rep_data[0]))
@@ -365,15 +304,10 @@ def main(args):
     class_weights = torch.FloatTensor([w_neg, w_pos]).to(device_id)
     print("weight ", class_weights)
     print("Finished reading\n")
-<<<<<<< HEAD
     
     random.seed(args.seed)
     hparams = Namespace(rep_data=rep_data,
                         lr=args.lr,
-=======
-
-    hparams = Namespace(lr=args.lr,
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
                         epochs=args.epochs,
                         batch_size=args.batch_size,
                         batch_size_split=args.batch_size_split,
@@ -391,11 +325,7 @@ def main(args):
                         n_rep = n_rep,
                         first_kernel_size = args.first_kernel_size, 
                         dropout_rate = args.dropout_rate,
-<<<<<<< HEAD
                         device = "cuda:" + str(device_id),
-=======
-                        device = device,
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
                         smooth = args.smooth,
                         class_weights = class_weights,
                         modelname = args.model,
@@ -407,12 +337,8 @@ def main(args):
         module = ContrastLearn_lab(hparams).to(device_id)
     else:
         module = ContrastLearn(hparams).to(device_id)
-<<<<<<< HEAD
    
 #    trainer = pl.Trainer(gpus=args.gpus, max_epochs=hparams.epochs) 
-=======
-    
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
     trainer = pl.Trainer(
             accelerator='gpu',
             devices = torch.cuda.device_count(), #args.gpus,
@@ -423,13 +349,8 @@ def main(args):
     trainer.fit(module)
     print(f"Done on {rank}\n")
 
-<<<<<<< HEAD
     checkpoint_file = args.modelpath
     trainer.save_checkpoint(checkpoint_file)
-=======
-    #checkpoint_file = args.modelpath
-    #trainer.save_checkpoint(checkpoint_file)
->>>>>>> 8202bc760b5af35de838c3b3cff2dd507182ede7
     
     
 
